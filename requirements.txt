@@ -1,2 +1,10 @@
-Django==2.2.16
-pytz==2018.5
+﻿asgiref==3.7.2
+backports.zoneinfo==0.2.1
+Django==4.1.7
+django-rest-passwordreset==1.2.1
+djangorestframework==3.14.0
+psycopg2-binary==2.9.3
+pytz==2022.7.1
+PyYAML==6.0
+sqlparse==0.4.2
+tzdata==2021.5
