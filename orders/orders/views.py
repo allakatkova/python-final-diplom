@@ -110,6 +110,44 @@ class ShopUpload(APIView):
         else:
             return JsonResponse({'Status': False})
 
+    def handle_uploaded_file(sefl, shop_file, user):
+        shop = Shop()
+        product = Product()
+        parameter = Parameter()
+        with open(shop_file, 'r', encoding='utf8') as stream:
+            try:
+                shop_data = yaml.safe_load(stream)
+                shop.name = shop_data['shop']
+                seller = User.objects.filter(id=user).first()
+                shop.seller = seller
+                shop.save()
+                for category in shop_data['categories']:
+                    category_object, _ = Category.objects.get_or_create(
+                        id=category['id'], name=category['name'])
+                    category_object.shops.add(shop)
+                    category_object.save()
+                for goods in shop_data['goods']:
+                    category = Category.objects.get(id=goods['category'])
+                    product_object, _ = Product.objects.get_or_create(name=goods['name'], model=goods['model'],
+                                                                      category=category)
+                    product_object.save()
+                    prod_pk = Product.objects.filter(
+                        name=goods['name']).first()
+                    shopproduct_object, _ = ShopProduct.objects.get_or_create(
+                        ext_id=goods['id'], quantity=goods['quantity'], price=goods['price'], price_rrc=goods['price_rrc'], product=prod_pk, shop=shop)
+                    shopproduct_object.save()
+                    for parameters, value in goods['parameters'].items():
+                        parameter_object, _ = Parameter.objects.get_or_create(
+                            name=parameters)
+                        parameter_object.save()
+                        param_obj_pk = Parameter.objects.filter(
+                            name=parameters).first()
+                        product_inf_object, _ = ProductInf.objects.get_or_create(
+                            value=value, parameter=param_obj_pk, product=prod_pk)
+                        product_inf_object.save()
+            except yaml.YAMLError as exc:
+                return JsonResponse({'Status': False, 'Error': str(exc)})
+
 ###################################################################################
 
 
