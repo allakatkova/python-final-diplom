@@ -6,6 +6,20 @@ from backend.models import Shop, ShopFiles, Category, Product, ShopProduct, Para
 import yaml
 from orders.settings import BASE_DIR, DATA_ROOT
 import os
+import yaml
+from orders.settings import BASE_DIR, DATA_ROOT
+import os
+from django.contrib.auth.password_validation import validate_password
+from backend.serializers import UserSerializer, CategorySerializer, ShopSerializer, ProductSerializer, \
+    ShopProductSerializer, ProductInfSerializer, ContactSerializer
+from backend.signals import new_user_registered, new_order
+from rest_framework.response import Response
+from rest_framework.authtoken.models import Token
+from django.contrib.auth import authenticate
+from rest_framework.viewsets import ModelViewSet
+from rest_framework import filters
+from django_filters.rest_framework import DjangoFilterBackend
+from django.db.models import Q, Sum, F
 
 
 class RegisterAccount(APIView):
