@@ -1,3 +1,14 @@
+from django.shortcuts import render
+from .forms import UploadFileForm
+from django.http import JsonResponse
+from rest_framework.views import APIView
+from backend.models import Shop, ShopFiles, Category, Product, ShopProduct, Parameter, ProductInf, ConfirmEmailToken, \
+    Contact, User
+import yaml
+from orders.settings import BASE_DIR, DATA_ROOT
+import os
+
+
 class PartnerUpdate(APIView):
     """
     Класс для обновления прайса от поставщика
