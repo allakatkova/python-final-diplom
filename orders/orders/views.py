@@ -148,6 +148,106 @@ class ShopUpload(APIView):
             except yaml.YAMLError as exc:
                 return JsonResponse({'Status': False, 'Error': str(exc)})
 
+
+class UserContact(APIView):
+    def get(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
+        contact = Contact.objects.filter(user_id=request.user.id)
+        serializer = ContactSerializer(contact, many=True)
+        return Response(serializer.data)
+
+    def post(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
+        if {'country', 'region', 'zip', 'city', 'street', 'house', 'phone'}.issubset(request.data):
+            request.data.update({'user': request.user.id})
+            serializer = ContactSerializer(data=request.data)
+
+            if serializer.is_valid():
+                serializer.save()
+                return JsonResponse({'Status': True})
+            else:
+                JsonResponse({'Status': False, 'Errors': serializer.errors})
+
+        return JsonResponse({'Status': False, 'Errors': 'Необходимо указать все требуемые аргументы'})
+
+    def delete(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
+        items_sting = request.data.get('items')
+        if items_sting:
+            items_list = items_sting.split(',')
+            query = Q()
+            objects_deleted = False
+            for contact_id in items_list:
+                if contact_id.isdigit():
+                    query = query | Q(user_id=request.user.id, id=contact_id)
+                    objects_deleted = True
+            if objects_deleted:
+                deleted_count = Contact.objects.filter(query).delete()[0]
+                return JsonResponse({'Status': True, 'Удалено объектов': deleted_count})
+        return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'})
+
+    def put(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
+        if 'id' in request.data:
+            if request.data['id'].isdigit():
+                contact = Contact.objects.filter(
+                    id=request.data['id'], user_id=request.user.id).first()
+                if contact:
+                    serializer = ContactSerializer(
+                        contact, data=request.data, partial=True)
+                    if serializer.is_valid():
+                        serializer.save()
+                        return JsonResponse({'Status': True})
+                    else:
+                        JsonResponse(
+                            {'Status': False, 'Errors': serializer.errors})
+
+        return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'})
+
+
+class CategoryViewSet(ModelViewSet):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+    http_method_names = ['get', ]
+
+
+class ShopViewSet(ModelViewSet):
+    queryset = Shop.objects.all()
+    serializer_class = ShopSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['name', 'is_work']
+    http_method_names = ['get', ]
+
+
+class ProductViewSet(ModelViewSet):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['name', 'model']
+    http_method_names = ['get', ]
+
+
+class ShopProductViewSet(ModelViewSet):
+    queryset = ShopProduct.objects.all()
+    serializer_class = ShopProductSerializer
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['product__model', 'product__name']
+    http_method_names = ['get', ]
+
+
+class ProductInfViewSet(ModelViewSet):
+    queryset = ProductInf.objects.all()
+    serializer_class = ProductInfSerializer
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['product_inf_id__product_id__model',
+                     'product_inf_id__product_id__name']
+    http_method_names = ['get', ]
+
+
 ###################################################################################
 
 
