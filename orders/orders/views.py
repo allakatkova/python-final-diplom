@@ -48,6 +48,38 @@ class ConfirmAccount(APIView):
                 return JsonResponse({'Status': False, 'Errors': 'Проверьте правильность написания аргументов email или токен'})
         return JsonResponse({'Status': False, 'Errors': 'Необходимо указать все требуемые аргументы'})
 
+
+class AccountDetails(APIView):
+    def get(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
+        else:
+            serializer = UserSerializer(request.user)
+            return Response(serializer.data)
+
+    def post(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
+        if 'password' in request.data:
+            errors = {}
+            # проверка пароля на сложность
+            try:
+                validate_password(request.data['password'])
+            except Exception as password_error:
+                error_array = []
+                for item in password_error:
+                    error_array.append(item)
+                return JsonResponse({'Status': False, 'Errors': {'password': error_array}})
+            else:
+                request.user.set_password(request.data['password'])
+        user_serializer = UserSerializer(
+            request.user, data=request.data, partial=True)
+        if user_serializer.is_valid():
+            user_serializer.save()
+            return JsonResponse({'Status': True})
+        else:
+            return JsonResponse({'Status': False, 'Errors': user_serializer.errors})
+
 ###################################################################################
 
 
