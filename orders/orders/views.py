@@ -2,8 +2,7 @@ from django.shortcuts import render
 from .forms import UploadFileForm
 from django.http import JsonResponse
 from rest_framework.views import APIView
-from backend.models import Shop, ShopFiles, Category, Product, ShopProduct, Parameter, ProductInf, ConfirmEmailToken, \
-    Contact, User
+from backend.models import Shop, ShopFiles, Category, Product, ShopProduct, Parameter, ProductInf, ConfirmEmailToken, Contact, User
 import yaml
 from orders.settings import BASE_DIR, DATA_ROOT
 import os
@@ -17,15 +16,13 @@ class RegisterAccount(APIView):
                 validate_password(request.data['password'])
             except Exception as password_error:
                 error_array = []
-                # noinspection PyTypeChecker
                 for item in password_error:
                     error_array.append(item)
                 return JsonResponse({'Status': False, 'Errors': {'password': error_array}})
             else:
-                # проверяем данные для уникальности имени пользователя
                 user_serializer = UserSerializer(data=request.data)
+                # проверка уникальности имени пользователя и его сохранение
                 if user_serializer.is_valid():
-                    # сохраняем пользователя
                     user = user_serializer.save()
                     user.set_password(request.data['password'])
                     user.save()
@@ -34,8 +31,22 @@ class RegisterAccount(APIView):
                     return JsonResponse({'Status': True})
                 else:
                     return JsonResponse({'Status': False, 'Errors': user_serializer.errors})
+        return JsonResponse({'Status': False, 'Errors': 'Необходимо указать все требуемые аргументы'})
 
-        return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'})
+
+class ConfirmAccount(APIView):
+    def post(self, request, *args, **kwargs):
+        if {'email', 'token'}.issubset(request.data):
+            token = ConfirmEmailToken.objects.filter(
+                user__email=request.data['email'], key=request.data['token']).first()
+            if token:
+                token.user.is_active = True
+                token.user.save()
+                token.delete()
+                return JsonResponse({'Status': True})
+            else:
+                return JsonResponse({'Status': False, 'Errors': 'Проверьте правильность написания аргументов email или токен'})
+        return JsonResponse({'Status': False, 'Errors': 'Необходимо указать все требуемые аргументы'})
 
 ###################################################################################
 
