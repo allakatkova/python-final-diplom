@@ -80,6 +80,19 @@ class AccountDetails(APIView):
         else:
             return JsonResponse({'Status': False, 'Errors': user_serializer.errors})
 
+
+class LoginAccount(APIView):
+    def post(self, request, *args, **kwargs):
+        if {'email', 'password'}.issubset(request.data):
+            user = authenticate(
+                request, username=request.data['email'], password=request.data['password'])
+            if user is not None:
+                if user.is_active:
+                    token, _ = Token.objects.get_or_create(user=user)
+                    return JsonResponse({'Status': True, 'Token': token.key})
+            return JsonResponse({'Status': False, 'Errors': 'Ошибка авторизации!'})
+        return JsonResponse({'Status': False, 'Errors': 'Необходимо указать все требуемые аргументы'})
+
 ###################################################################################
 
 
