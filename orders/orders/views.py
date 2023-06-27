@@ -93,6 +93,23 @@ class LoginAccount(APIView):
             return JsonResponse({'Status': False, 'Errors': 'Ошибка авторизации!'})
         return JsonResponse({'Status': False, 'Errors': 'Необходимо указать все требуемые аргументы'})
 
+
+class ShopUpload(APIView):
+    def post(self, request):
+        if not request.user.is_authenticated:
+            return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
+        if request.user.type != 'seller':
+            return JsonResponse({'Status': False, 'Error': 'Вход только для магазинов'}, status=403)
+        form = UploadFileForm(request.POST, request.FILES)
+        if form.is_valid():
+            form.save()
+            file = request.FILES.popitem()
+            self.handle_uploaded_file(os.path.join(
+                DATA_ROOT, str(file[1][0])), request.user.id)
+            return JsonResponse({'Status': True})
+        else:
+            return JsonResponse({'Status': False})
+
 ###################################################################################
 
 
