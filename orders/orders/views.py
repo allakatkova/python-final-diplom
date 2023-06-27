@@ -9,6 +9,37 @@ from orders.settings import BASE_DIR, DATA_ROOT
 import os
 
 
+class RegisterAccount(APIView):
+    def post(self, request, *args, **kwargs):
+        if {'first_name', 'last_name', 'email', 'password', 'company', 'position', 'type'}.issubset(request.data):
+            errors = {}
+            try:
+                validate_password(request.data['password'])
+            except Exception as password_error:
+                error_array = []
+                # noinspection PyTypeChecker
+                for item in password_error:
+                    error_array.append(item)
+                return JsonResponse({'Status': False, 'Errors': {'password': error_array}})
+            else:
+                # проверяем данные для уникальности имени пользователя
+                user_serializer = UserSerializer(data=request.data)
+                if user_serializer.is_valid():
+                    # сохраняем пользователя
+                    user = user_serializer.save()
+                    user.set_password(request.data['password'])
+                    user.save()
+                    new_user_registered.send(
+                        sender=self.__class__, user_id=user.id)
+                    return JsonResponse({'Status': True})
+                else:
+                    return JsonResponse({'Status': False, 'Errors': user_serializer.errors})
+
+        return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'})
+
+###################################################################################
+
+
 class PartnerUpdate(APIView):
     """
     Класс для обновления прайса от поставщика
