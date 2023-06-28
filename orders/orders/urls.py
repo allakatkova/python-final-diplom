@@ -15,7 +15,21 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
+from backend.views import ShopUpload, RegisterAccount, ConfirmAccount, LoginAccount, CategoryViewSet, ShopViewSet, ProductViewSet, ShopProductViewSet, ProductInfViewSet, UserContact
+from rest_framework.routers import DefaultRouter
 
-urlpatterns = [
-    path('admin/', admin.site.urls),
-]
+
+r = DefaultRouter()
+r.register('categories', CategoryViewSet)
+r.register('shops', ShopViewSet)
+r.register('products', ProductViewSet)
+r.register('products_in_shop', ShopProductViewSet)
+r.register('product_inf', ProductInfViewSet)
+urlpatterns = r.urls
+urlpatterns += [path('admin/', admin.site.urls)]
+urlpatterns += [path('shop/upload', ShopUpload.as_view(), name='shop-upload')]
+urlpatterns += [path('user/register',
+                     RegisterAccount.as_view(), name='user-register')]
+urlpatterns += [path('user/register/confirm',
+                     ConfirmAccount.as_view(), name='user-register-confirm')]
+urlpatterns += [path('user/login', LoginAccount.as_view(), name='user-login')]
