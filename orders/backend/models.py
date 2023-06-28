@@ -5,6 +5,11 @@ from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.validators import UnicodeUsernameValidator
 import django_rest_passwordreset.tokens
 
+USER_TYPE_CHOICES = (
+    ('seller', 'Продавец'),
+    ('buyer', 'Покупатель'),
+)
+
 STATE_CHOICES = (
     ('basket', 'В корзине'),
     ('new', 'Новый'),
@@ -15,24 +20,21 @@ STATE_CHOICES = (
     ('canceled', 'Отменен'),
 )
 
-USER_TYPE_CHOICES = (
-    ('seller', 'Продавец'),  # ('shop', 'Магазин')
-    ('buyer', 'Покупатель'),
-)
-
 
 class CustomUser(BaseUserManager):
     use_in_migrations = True
 
-    def create(self, email, password, **extra_fields):
+    # общая модель создания пользователя
+    def _create_user(self, email, password, **extra_fields):
         if not email:
-            raise ValueError('E-mail должен быть заполнен!')
+            raise ValueError('The email must be set')
         email = self.normalize_email(email)
         user = self.model(email=email, **extra_fields)
         user.set_password(password)
         user.save()
         return user
 
+    # создание покупателя/продавца
     def create_user(self, email, password, **extra_fields):
         extra_fields.setdefault('is_staff', False)
         extra_fields.setdefault('is_superuser', False)
@@ -42,11 +44,9 @@ class CustomUser(BaseUserManager):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
         if extra_fields.get('is_staff') is not True:
-            raise ValueError(
-                'Суперпользователь должен иметь статус is_staff=True')
+            raise ValueError('Superuser must have status is_staff=True')
         if extra_fields.get('is_superuser') is not True:
-            raise ValueError(
-                'Суперпользователь должен иметь статус is_superuser=True')
+            raise ValueError('Superuser must have status is_superuser=True')
         return self.create(email, password, **extra_fields)
 
 
@@ -63,13 +63,17 @@ class User(AbstractUser):
     username = models.CharField(_('username'),
                                 max_length=128,
                                 help_text=_(
-                                    'Имя пользователя должно быть не более 128 символов. Может содержать только буквы, цифры и @/./+/-/_.'),
+                                    'Required. 128 characters or fewer. Letters, digits and @/./+/-/_ only.'),
                                 validators=[username_validator],
-                                error_messages={'unique': _("Пользователь с таким именем уже существует."), })
+                                error_messages={
+                                    'unique': _("A user with that username already exists."),
+    })
     is_active = models.BooleanField(_('active'),
                                     default=False,
-                                    help_text=_('Указатель, стоит ли пользователя считать активным.'
-                                                'Можно снять выделение, чтобы не удалять учетную запись.'))
+                                    help_text=_(
+                                        'Designates whether this user should be treated as active. '
+                                        'Unselect this instead of deleting accounts.'
+    ))
     type = models.CharField(verbose_name='Тип пользователя',
                             choices=USER_TYPE_CHOICES, max_length=16, default='buyer')
 
@@ -83,8 +87,8 @@ class Shop(models.Model):
     name = models.CharField(
         max_length=64, verbose_name='Название магазина', unique=True)
     url = models.URLField(blank=True, null=True, verbose_name='Ссылка')
-    seller = models.OneToOneField(
-        User, verbose_name='Продавец', blank=True, null=True, on_delete=models.CASCADE)
+    seller = models.OneToOneField(User, verbose_name='Продавец', blank=True, null=True,
+                                  on_delete=models.CASCADE)
     is_work = models.BooleanField(verbose_name='Доступность', default=True)
 
     class Meta:
@@ -156,10 +160,10 @@ class Parameter(models.Model):
 
 
 class ProductInf(models.Model):
-    product = models.ForeignKey(Product, verbose_name='Товар',
-                                related_name='product_inf', blank=True, null=True, on_delete=models.CASCADE)
-    parameter = models.ForeignKey(Parameter, verbose_name='Параметр',
-                                  related_name='product_inf', blank=True, on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, verbose_name='Товар', related_name='product_inf', blank=True,
+                                null=True, on_delete=models.CASCADE)
+    parameter = models.ForeignKey(Parameter, verbose_name='Параметр', related_name='product_inf', blank=True,
+                                  on_delete=models.CASCADE)
     value = models.CharField(
         max_length=128, blank=True, verbose_name='Значение')
 
@@ -169,8 +173,8 @@ class ProductInf(models.Model):
 
 
 class Contact(models.Model):
-    user = models.ForeignKey(User, verbose_name='Пользователь',
-                             related_name='contacts', blank=True, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, verbose_name='Пользователь', related_name='contacts', blank=True,
+                             on_delete=models.CASCADE)
     country = models.CharField(max_length=64, verbose_name='Страна')
     region = models.CharField(max_length=64, verbose_name='Регион')
     zip = models.IntegerField(verbose_name='Почтовый индекс')
@@ -189,13 +193,13 @@ class Contact(models.Model):
 
 
 class Order(models.Model):
-    user = models.ForeignKey(User, verbose_name='Пользователь',
-                             related_name='orders', blank=True, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, verbose_name='Пользователь', related_name='orders',
+                             blank=True, on_delete=models.CASCADE)
     dt = models.DateTimeField(auto_now_add=True)
     state = models.CharField(verbose_name='Статус заказа',
                              choices=STATE_CHOICES, max_length=16)
-    user_contact = models.ForeignKey(
-        Contact, verbose_name='Контакты', blank=True, null=True, on_delete=models.CASCADE)
+    user_contact = models.ForeignKey(Contact, verbose_name='Контакты', blank=True, null=True,
+                                     on_delete=models.CASCADE)
 
     class Meta:
         verbose_name = 'Заказ'
@@ -207,10 +211,10 @@ class Order(models.Model):
 
 
 class OrderItem(models.Model):
-    order = models.ForeignKey(Order, verbose_name='Заказ',
-                              related_name='ordered_items', blank=True, on_delete=models.CASCADE)
-    product_info = models.ForeignKey(ProductInf, verbose_name='Информация о продукте',
-                                     related_name='ordered_items', blank=True, on_delete=models.CASCADE)
+    order = models.ForeignKey(Order, verbose_name='Заказ', related_name='ordered_items', blank=True,
+                              on_delete=models.CASCADE)
+    product_info = models.ForeignKey(ProductInf, verbose_name='Информация о продукте', related_name='ordered_items',
+                                     blank=True, on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField(verbose_name='Количество')
 
     class Meta:
@@ -246,6 +250,7 @@ class ConfirmEmailToken(models.Model):
         verbose_name=_("When was this token generated")
     )
 
+    # Key field, though it is not the primary key of the model
     key = models.CharField(
         _("Key"),
         max_length=64,

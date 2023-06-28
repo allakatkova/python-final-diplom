@@ -38,7 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'backend',
-    'rest_framework.authtoken'
+    'rest_framework.authtoken',
 ]
 
 MIDDLEWARE = [
@@ -78,7 +78,7 @@ WSGI_APPLICATION = 'orders.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'diploma',
+        'NAME': 'diplom',
         'HOST': '127.0.0.1',
         'PORT': '5432',
         'USER': 'postgres',
@@ -143,7 +143,7 @@ REST_FRAMEWORK = {
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.mailtrap.io'
-SERVER_EMAIL = EMAIL_HOST_USER
 EMAIL_PORT = '2525'
 EMAIL_HOST_USER = 'login'  # заменить на реальные значения
 EMAIL_HOST_PASSWORD = 'password'  # заменить на реальные значения
+SERVER_EMAIL = EMAIL_HOST_USER
